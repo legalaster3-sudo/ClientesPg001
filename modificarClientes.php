@@ -1,33 +1,24 @@
 <?php
-//Definición de variables para la conexión a la base de datos
-$usuario = "root";
-$servidor = "localhost";
-$password=""; 
-$baseDatos = "udesDB";
-
-//Establecer conexión con el servidor MySQL
-$conexion = mysqli_connect($servidor, $usuario, $password) or die("se produjo un error al conectar");
-mysqli_select_db($conexion, $baseDatos);
-
+require_once'conexionpg.php';
 $mostrar_lista = true;
 $mensaje = "";
 
 // Logica de Actualizacion
 if (isset($_POST['guardar'])) {
-    $id = $_POST['id_clientes'];
-    $nombres = $_POST['nombres'];
+    $id = $_POST['id'];
+    $nombre_clientes = $_POST['nombre_cliente'];
     $apellido_paterno = $_POST['apellido_paterno'];
     $apellido_materno = $_POST['apellido_materno'];
-    $ci = $_POST['ci'];
+    $CI = $_POST['ci'];
     $direccion = $_POST['direccion'];
-
+    $fecha_nacimiento = $_POST['fecha_de_nacimiento'];
     //consulta SQL para actualizar
-    $sql_update = "UPDATE clientes SET nombres= '$nombres', apellido_paterno='$apellido_paterno', apellido_materno='$apellido_materno', ci='$ci', direccion='$direccion' WHERE id_clientes='$id'";
+    $sql_update = "UPDATE clientes SET nombres= '$nombre_cliente', apellido_paterno='$apellido_paterno', apellido_materno='$apellido_materno', ci='$CI', direccion='$direccion', fecha_de_nacimiento='$fecha_nacimiento' WHERE id_clientes='$id'";
 
-    if (mysqli_query($conexion, $sql_update)) {
+    if (mysqli_query($conectar, $sql_update)) {
         $mensaje = "Cliente actualizado correctamente.";
     } else {
-        $mensaje = "Error al actualizar: " . mysqli_error($conexion);
+        $mensaje = "Error al actualizar: " . mysqli_error($conectar);
     }
 }
 
@@ -36,10 +27,10 @@ if (isset($_POST['modificar'])) {
     if(isset($_POST['ids']) && count($_POST['ids']) == 1) {
         $id_editar = $_POST['ids'][0];
         //obtener datos actuales del cliente
-        $sql_buscar = "SELECT * FROM clientes WHERE id_clientes='$id_editar'";
-        $resultado = mysqli_query($conexion, $sql_buscar);
+        $sql_buscar = "SELECT * FROM clientesdb WHERE id_clientes='$id_editar'";
+        $resultado = pg_query($conectar, $sql_buscar);
 
-        if ($cliente = mysqli_fetch_array($resultado)) {
+        if ($cliente = pg_fetch_array($resultado)) {
             $mostrar_lista = false; //ocultar lista para mostrar el formulario
         } else {
             $mensaje = "Error al recuperar los datos del cliente.";
@@ -54,22 +45,23 @@ $where = "";
 $busqueda = "";
 if (isset($_GET['buscar'])) {
     $busqueda = $_GET['buscar'];
-    $busqueda_segura = mysqli_real_escape_string($conexion, $busqueda);
-    $where = "WHERE nombres LIKE '%$busqueda_segura%' OR apellido_paterno LIKE '%$busqueda_segura%' OR apellido_materno LIKE '%$busqueda_segura%'";
+    $busqueda_segura = pg_escape_string($conectar, $busqueda);
+    $where = "WHERE nombre_clientes LIKE '%$busqueda_segura%' OR apellido_paterno LIKE '%$busqueda_segura%' OR apellido_materno LIKE '%$busqueda_segura%'";
 }
 
-$sql_lista = "SELECT * FROM clientes $where";
-$consulta = mysqli_query($conexion, $sql_lista);
+$sql_lista = "SELECT * FROM clientesdb $where";
+$consulta = pg_query($conectar, $sql_lista);
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Modificar Clientes</title>
+    <title>Modificar clientes</title>
+    <link rel="stylesheet"href="misestilos.css">
 </head>
 <body>
-    <h2>Modificar Clientes</h2>
+    <h2>Modificar clientes</h2>
 
     <?php if ($mensaje): ?>
         <p style="color:blue; font-weight: bold;"><?php echo $mensaje; ?></p>
@@ -77,17 +69,17 @@ $consulta = mysqli_query($conexion, $sql_lista);
 
     <?php if (!$mostrar_lista && isset($cliente)): ?>
 
-        <h3>Editar Datos del Cliente</h3>
-        <form method="post" action="ModificarClientes.php">
+        <h3>Editar Datos del clinte</h3>
+        <form method="post" action="Modificarclientes.php">
             <input type="hidden" name="id_clientes" value="<?php echo $cliente['id_clientes']; ?>">
 
-            <label>Nombres</label><br>
-            <input type="text" name="nombres" value="<?php echo $cliente['nombres']; ?>" required><br><br>
+            <label>Nombre Cliente</label><br>
+            <input type="text" name="nombre_cliente" value="<?php echo $cliente['nombres']; ?>" required><br><br>
 
             <label>Apellido Paterno</label><br>
             <input type="text" name="apellido_paterno" value="<?php echo $cliente['apellido_paterno']; ?>" required><br><br>
 
-            <label>Apellido Paterno</label><br>
+            <label>Apellido Materno</label><br>
             <input type="text" name="apellido_materno" value="<?php echo $cliente['apellido_materno']; ?>" required><br><br>
 
             <label>CI</label><br>
@@ -95,7 +87,9 @@ $consulta = mysqli_query($conexion, $sql_lista);
             
             <label>Direccion</label><br>
             <input type="text" name="direccion" value="<?php echo $cliente['direccion']; ?>" required><br><br>
-            
+            <label>Fecha Nacimiento</label><br>
+            <input type="date" name="fecha_de_nacimiento" value="<?php echo $cliente['fecha_de_nacimiento']; ?>" required><br><br>
+
             <input type="submit" name="guardar" value="Guardar Cambios">
             <a href="ModificarClientes.php"><button type="button">Cancelar</button></a>
         </form>
@@ -109,21 +103,21 @@ $consulta = mysqli_query($conexion, $sql_lista);
         </form>
         <br>
 
-
         <form method="post" action="ModificarClientes.php">
         <table border="1">
             <tr>
             <th>Sel</th>   
-            <th>ID</th>
+            <th>id clientes</th>
             <th>Nombres</th>
             <th>Apellido Paterno</th>
             <th>Apellido Materno</th>
-            <th>CI</th>
+            <th>ci</th>
             <th>Dirección</th>
+            <th>Fecha de Nacimiento</th>        
             </tr>
             <?php
-            if (mysqli_num_rows($consulta) > 0) {
-                while ($columna = mysqli_fetch_array($consulta)) {
+            if (pg_num_rows($consulta) > 0) {
+                while ($columna = pg_fetch_array($consulta)) {
                     echo "<tr>";
                     echo "<td><input type=\"checkbox\" name=\"ids[]\" value=\"" . $columna['id_clientes'] . "\"></td>";
                     echo "<td>" . $columna['id_clientes'] . "</td>";
@@ -132,10 +126,11 @@ $consulta = mysqli_query($conexion, $sql_lista);
                     echo "<td>" . $columna['apellido_materno'] . "</td>";
                     echo "<td>" . $columna['ci'] . "</td>";
                     echo "<td>" . $columna['direccion'] . "</td>";
+                    echo "<td>" . $columna['fecha_de_nacimiento'] . "</td>";
                     echo "</tr>";
                 }
             } else {
-                echo "<tr><td colspan='7'>No se encontraron registros.</td></tr>";
+                echo "<tr><td colspan='9'>No se encontraron registros.</td></tr>";
             }
             ?>
         </table>
@@ -150,5 +145,5 @@ $consulta = mysqli_query($conexion, $sql_lista);
 </html>
        
 <?php
-mysqli_close($conexion);
+pg_close($conectar);
 ?>

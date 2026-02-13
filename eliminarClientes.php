@@ -1,14 +1,5 @@
 <?php
-// Definición de variables para la conexión a la base de datos
-$usuario = "root";
-$servidor = "localhost";
-$password=""; 
-$baseDatos = "udesDB";
-
-// Establecer conexión con el servidor MySQL Si falla, termina la ejecución y muestra "se produjo un error"
-$conexion = mysqli_connect($servidor, $usuario, $password) or die("se produjo un error al conectar");
-mysqli_select_db($conexion, $baseDatos);
-
+require_once'conexionpg.php';
 //Logica para eliminar registros seleccionados
 if (isset($_POST['eliminar']) && isset($_POST['id'])) {
     $ids_a_eliminar = $_POST['id'];
@@ -20,10 +11,10 @@ if (isset($_POST['eliminar']) && isset($_POST['id'])) {
 
         $sql_delete ="DELETE FROM clientes WHERE id_clientes IN ($lista_ids)";
 
-        if (mysqli_query($conexion, $sql_delete)) {
+        if (pg_query($conectar, $sql_delete)) {
             echo "<p>Registros eliminados correctamente.</p>";
         } else {
-            echo "Error al eliminar: " . mysqli_error($conexion);
+            echo "Error al eliminar: " . pg_last_error($conectar);
         }
     }
 }
@@ -34,14 +25,13 @@ $busqueda = "";
 if (isset($_GET['buscar'])) {
     $busqueda = $_GET['buscar'];
     //Escapar caracteres especiales para evitar inyeccion SQL
-    $busqueda_segura = mysqli_real_escape_string($conexion, $busqueda);
+    $busqueda_segura = pg_escape_string($conectar, $busqueda);
     $where = "WHERE nombres LIKE '%$busqueda_segura%' OR apellido_paterno LIKE '%$busqueda_segura%' OR apellido_materno LIKE '%$busqueda_segura%'";
 }
 
 //Consulta para obtener los clientes
-$sql = "SELECT * FROM clientes $where";
-$consulta = mysqli_query($conexion, $sql);
-
+$sql = "SELECT * FROM clientesdb $where";
+$consulta = pg_query($conectar, $sql);
 ?>
 
 <!DOCTYPE html>
@@ -49,6 +39,7 @@ $consulta = mysqli_query($conexion, $sql);
 <head>
     <meta charset="UTF-8">
     <title>Eliminar Clientes</title>
+     <link rel="stylesheet"href="misestilos.css">
     <script>
         function seleccionarTodos(source) {
             checkboxes = document.getElementsByName('ids[]');
@@ -61,7 +52,6 @@ $consulta = mysqli_query($conexion, $sql);
 <body>
     <h2>Eliminar Clientes</h2>
 
-
     <form method="get" action="EliminarClientes.php">
         <input type="text" name="buscar" value="<?php echo htmlspecialchars($busqueda); ?>" placeholder="Buscar por nombre o apellido">
         <input type="submit" values="Buscar">
@@ -69,21 +59,21 @@ $consulta = mysqli_query($conexion, $sql);
         </form>
         <br>
 
-    
     <form method="post" action="EliminarClientes.php">
         <table border="1">
             <tr>
             <th><input type="checkbox" onClick="seleccionarTodos(this)"></th>
             <th>ID</th>
-            <th>Nombres</th>
+            <th>Nombre_Cliente</th>
             <th>Apellido Paterno</th>
             <th>Apellido Materno</th>
             <th>CI</th>
             <th>Dirección</th>
+            <th>Fecha de Nacimiento</th>
             </tr>
             <?php
-            if (mysqli_num_rows($consulta) > 0) {
-                while ($columna = mysqli_fetch_array($consulta)) {
+            if (pg_num_rows($consulta) > 0) {
+                while ($columna = pg_fetch_array($consulta)) {
                     echo "<tr>";
                     echo "<td><input type=\"checkbox\" name=\"id[]\" value=\"" . $columna['id_clientes'] . "\"></td>";
                     echo "<td>" . $columna['id_clientes'] . "</td>";
@@ -92,6 +82,7 @@ $consulta = mysqli_query($conexion, $sql);
                     echo "<td>" . $columna['apellido_materno'] . "</td>";
                     echo "<td>" . $columna['ci'] . "</td>";
                     echo "<td>" . $columna['direccion'] . "</td>";
+                    echo "<td>" . $columna['fecha_de_nacimiento'] . "</td>";
                     echo "</tr>";
                 }
             } else {
@@ -108,5 +99,5 @@ $consulta = mysqli_query($conexion, $sql);
 </html>
 
 <?php
-mysqli_close($conexion);
+pg_close($conectar);
 ?>
